@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-NETWORK_ID=${NETWORK_ID:-"12345"}
-NETWORK_BASE="networks/${NETWORK_ID}"
+source "$(dirname $0)/common.sh"
 
 cd "${NETWORK_BASE}"
 
@@ -12,22 +11,27 @@ if [ -d "codex-contracts-eth" ]; then
   rm -rf codex-contracts-eth
 fi
 
+echo "Deploying contracts."
+
 git clone https://github.com/codex-storage/codex-contracts-eth
 
-echo "Deploying contracts."
 cd codex-contracts-eth
-
 export DISTTEST_NETWORK_URL=http://localhost:8545
 npm install
 npx hardhat deploy --network codexdisttestnetwork
 
-cd ..
-
 echo "Creating accounts for storage provider and client."
-geth account new --datadir "./data1" --password <(echo "") | grep -o -e '0x[A-Za-z0-9]*'  >> ./storage-account 
-geth account new --datadir "./data1" --password <(echo "") | grep -o -e '0x[A-Za-z0-9]*'  >> ./client-account
 
-echo "Minting tokens for client."
-../../scripts/mint-tokens.js ./codex-contracts-eth/deployments/codexdisttestnetwork/TestToken.json $(cat ./client-account) 100000
+cd ../../.. # back to package root
+
+create_account "storage"
+create_account "client"
+
+read_account "client"
+read_account "signer"
+
+echo "Minting tokens for client (${CLIENT_ACCOUNT})."
+
+./scripts/mint-tokens.js ./${NETWORK_BASE}/codex-contracts-eth/deployments/codexdisttestnetwork/TestToken.json ${SIGNER_ACCOUNT} ${CLIENT_ACCOUNT} 100000
 
 echo "All good."

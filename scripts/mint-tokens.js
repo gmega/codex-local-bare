@@ -27,19 +27,28 @@ console.log(`Read contract ABI. Address is ${address}.`)
 
 const contract = new web3.eth.Contract(abi, address);
 
-async function mint() {
+async function ensureEthBalance(account) {
+  const balance = await web3.eth.getBalance(account)
+  if (parseInt(balance) == 0) {
+    console.log(`Account ${account} has no Ether. Sending 1 Ether.`)
+    await web3.eth.sendTransaction({ from: signerAccount, to: account, value: web3.utils.toWei('1', 'ether') })
+  }
+  console.log(`ETH balance at ${account} is now ${web3.utils.fromWei(await web3.eth.getBalance(account), 'ether')}`)
+}
+
+async function mint(account) {
   try {
-    console.log(`Minting ${nTokens} tokens to account ${receiverAccount}`)
+    console.log(`Minting ${nTokens} tokens to account ${account}`)
     const result = await contract.
       methods.
-      mint(receiverAccount, parseInt(nTokens)).
+      mint(account, parseInt(nTokens)).
       send({ from: signerAccount });
 
-    console.log(result);
-    console.log(`Balance at ${receiverAccount} is now ${await contract.methods.balanceOf(receiverAccount).call()}`)
+    console.log(`CDX balance at ${account} is now ${await contract.methods.balanceOf(account).call()}`)
   } catch (error) {
     console.log(error.message);
   }
 }
 
-mint()
+ensureEthBalance(receiverAccount)
+mint(receiverAccount)

@@ -1,18 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-NETWORK_ID=${NETWORK_ID:-"12345"}
-NETWORK_BASE="networks/${NETWORK_ID}"
+source "$(dirname $0)/common.sh"
 
-spawn () {
-  if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    gnome-terminal -- "$@"
-  else
-    echo "Don't know how to spawn a new terminal on ${OSTYPE}"
-  fi
-}
-
-SIGNER_ACCOUNT=$(cat "./${NETWORK_BASE}/network.json" | jq '.alloc | keys[0]' --raw-output)
+read_account "signer"
 
 echo "Signer account is: ${SIGNER_ACCOUNT}"
 
