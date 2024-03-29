@@ -24,14 +24,17 @@ echo "Creating accounts for storage provider and client."
 
 cd ../../.. # back to package root
 
-create_account "storage"
+# Provisions accounts for 3 storage nodes, and 1 client node.
+create_account "storage1"
+seed_account "storage1"
+
+create_account "storage2"
+seed_account "storage2"
+
+create_account "storage3"
+seed_account "storage3"
+
 create_account "client"
-
-read_account "client"
-read_account "signer"
-
-echo "Minting tokens for client (${CLIENT_ACCOUNT})."
-
-./scripts/mint-tokens.js ./${NETWORK_BASE}/codex-contracts-eth/deployments/codexdisttestnetwork/TestToken.json ${SIGNER_ACCOUNT} ${CLIENT_ACCOUNT} 100000
+seed_account "client"
 
 echo "All good."

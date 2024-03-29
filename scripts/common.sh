@@ -5,6 +5,7 @@ export CODEX_SOURCE_HOME=${CODEX_SOURCE_HOME:-""}
 # -----------------------------------------------------------------------------
 export CODEX_LOG_LEVEL="TRACE;warn:discv5,providers,manager,cache;warn:libp2p,multistream,switch,transport,tcptransport,semaphore,asyncstreamwrapper,lpstream,mplex,mplexchannel,noise,bufferstream,mplexcoder,secure,chronosstream,connection,connmanager,websock,ws-session,dialer,muxedupgrade,upgrade,identify"
 export NETWORK_BASE="networks/${NETWORK_ID}"
+export PROJECT_ROOT=${PWD}
 
 # Opens a terminal with a command running in it. OS-specific.
 spawn () {
@@ -15,13 +16,29 @@ spawn () {
   fi
 }
 
-create_geth_account () {
+create_account () {
+  # Creates and account and stores the address and key in files.
   if [ -z "$1" ]; then
     echo "Please provide an account name."
     exit 1
   fi
 
-  geth account new --datadir "./${NETWORK_BASE}/data1" --password <(echo "") | grep -o -e '0x[A-Za-z0-9]*' > "./${NETWORK_BASE}/${1}-account"
+  local ACCOUNT=$(geth account new --datadir "./${NETWORK_BASE}/data1" --password <(echo "") | grep -o -e '0x[A-Za-z0-9]*')
+  echo $ACCOUNT > "./${NETWORK_BASE}/${1}-account"
+  ./scripts/geth-accounts.js $ACCOUNT > "./${NETWORK_BASE}/${1}-key"
+  chmod 600 "./${NETWORK_BASE}/${1}-key"
+}
+
+seed_account() {
+  # Puts ETH and CDX into the account so it can operate in the Codex marketplace.
+  if [ -z "$1" ]; then
+    echo "Please provide an account name."
+    exit 1
+  fi
+  read_account "signer"
+  read_account "${1}"
+  echo "Minting tokens for client (${1})."
+  ./scripts/mint-tokens.js ./${NETWORK_BASE}/codex-contracts-eth/deployments/codexdisttestnetwork/TestToken.json ${SIGNER_ACCOUNT} ${account_read} 100000000000
 }
 
 read_account () {
@@ -31,6 +48,7 @@ read_account () {
   fi
   var_value=$(cat "./${NETWORK_BASE}/${1}-account")
   declare -g "${1^^}_ACCOUNT"="${var_value}"
+  account_read="${var_value}"
 }
 
 # Reads the address of the marketplace contract from the hardhat deployment.

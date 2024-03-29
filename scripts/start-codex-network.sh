@@ -9,53 +9,66 @@ if [ -z "${CODEX_SOURCE_HOME}" ]; then
 fi
 
 echo "Starting Codex storage provider."
-
-read_account "storage"
-read_account "client"
-
 read_marketplace_address
 
 PROVER_ASSETS_HOME="${CODEX_SOURCE_HOME}/tests/circuits/fixtures/"
-STORAGE_PRIVATE_KEY=$(./scripts/geth-accounts.js "${STORAGE_ACCOUNT}")
-CLIENT_PRIVATE_KEY=$(./scripts/geth-accounts.js "${CLIENT_ACCOUNT}")
+
+start_codex_storage_node () {
+  if [ -z "$1" ]; then
+    echo "Please provide a port offset."
+    exit 1
+  fi
+
+  local port_offset=$1
+  local storage_key="${PROJECT_ROOT}/${NETWORK_BASE}/storage${1}-key"
+
+  local listen_port=$((8080 + port_offset))
+  local api_port=$((8000 + port_offset))
+  local disc_port=$((8090 + port_offset))
+
+  echo "* Starting Codex storage node ${1} (API port is ${api_port})"
+
+  spawn ${CODEX_SOURCE_HOME}/build/codex ${bootstrap}\
+    --data-dir="./codex${1}"\
+    --listen-addrs=/ip4/0.0.0.0/tcp/${listen_port}\
+    --api-port=${api_port}\
+    --disc-port=${disc_port}\
+    persistence\
+    --eth-provider=http://localhost:8545\
+    --eth-private-key="${PROJECT_ROOT}/${NETWORK_BASE}/storage${1}-key"\
+    --marketplace-address="${MARKETPLACE_ADDRESS}"\
+    --validator\
+    --validator-max-slots=1000\
+    prover\
+    --circom-r1cs="${PROVER_ASSETS_HOME}/proof_main.r1cs"\
+    --circom-wasm="${PROVER_ASSETS_HOME}/proof_main.wasm"\
+    --circom-zkey="${PROVER_ASSETS_HOME}/proof_main.zkey"
+
+  if [ -z "${bootstrap}" ]; then
+    # Yes, this is totally broken.
+    sleep 5
+    bootstrap_spr=$(curl -s localhost:${api_port}/api/codex/v1/debug/info | jq .spr --raw-output)
+    export bootstrap="--bootstrap-node=${bootstrap_spr}"
+    echo " * Boostrap SPR is ${bootstrap_spr}"
+  fi
+}
 
 cd ${NETWORK_BASE}
 
-# Storage node.
-spawn ${CODEX_SOURCE_HOME}/build/codex\
-  --data-dir="./codex1"\
-  --listen-addrs=/ip4/0.0.0.0/tcp/8081\
-  --api-port=8001\
-  --disc-port=8091\
-  persistence\
-  --eth-provider=http://localhost:8545\
-  --eth-account="${STORAGE_ACCOUNT}"\
-  --eth-private-key=<(echo "${STORAGE_PRIVATE_KEY}")\
-  --marketplace-address="${MARKETPLACE_ADDRESS}"\
-  --validator\
-  --validator-max-slots=1000\
-  prover\
-  --circom-r1cs="${PROVER_ASSETS_HOME}/proof_main.r1cs"\
-  --circom-wasm="${PROVER_ASSETS_HOME}/proof_main.wasm"\
-  --circom-zkey="${PROVER_ASSETS_HOME}/proof_main.zkey"
+start_codex_storage_node 1
+start_codex_storage_node 2
+start_codex_storage_node 3
 
-# Yes, this is totally broken.
-sleep 5
+echo "* Starting Codex client node (API port is 8000)"
 
-BOOTSTRAP_SPR=$(curl -s localhost:8001/api/codex/v1/debug/info | jq .spr --raw-output)
-
-echo "Codex storage provider is up and running with SPR ${BOOTSTRAP_SPR}."
-
-spawn ${CODEX_SOURCE_HOME}/build/codex\
+spawn ${CODEX_SOURCE_HOME}/build/codex ${bootstrap}\
   --data-dir="./codex2"\
   --listen-addrs=/ip4/0.0.0.0/tcp/8082\
-  --api-port=8002\
-  --disc-port=8092\
-  --bootstrap-node="${BOOTSTRAP_SPR}"\
+  --api-port=8000\
+  --disc-port=8090\
   persistence\
   --eth-provider=http://localhost:8545\
-  --eth-account="${CLIENT_ACCOUNT}"\
-  --eth-private-key=<(echo "${CLIENT_PRIVATE_KEY}")\
+  --eth-private-key="${PROJECT_ROOT}/${NETWORK_BASE}/client-key"\
   --marketplace-address="${MARKETPLACE_ADDRESS}"\
   --validator\
   --validator-max-slots=1000
