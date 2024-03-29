@@ -3,9 +3,11 @@
 export NETWORK_ID=${NETWORK_ID:-"12345"}
 export CODEX_SOURCE_HOME=${CODEX_SOURCE_HOME:-""}
 # -----------------------------------------------------------------------------
-export CODEX_LOG_LEVEL="TRACE;warn:discv5,providers,manager,cache;warn:libp2p,multistream,switch,transport,tcptransport,semaphore,asyncstreamwrapper,lpstream,mplex,mplexchannel,noise,bufferstream,mplexcoder,secure,chronosstream,connection,connmanager,websock,ws-session,dialer,muxedupgrade,upgrade,identify"
+# export CODEX_LOG_LEVEL="INFO;trace:codex,marketplace"
 export NETWORK_BASE="networks/${NETWORK_ID}"
 export PROJECT_ROOT=${PWD}
+export NETWORK_BASE_FULL="${PROJECT_ROOT}/${NETWORK_BASE}"
+export CONTRACT_DEPLOY_FULL="${NETWORK_BASE_FULL}/codex-contracts-eth/deployments/codexdisttestnetwork"
 
 # Opens a terminal with a command running in it. OS-specific.
 spawn () {
@@ -17,7 +19,7 @@ spawn () {
 }
 
 create_account () {
-  # Creates and account and stores the address and key in files.
+  # Creates an account and stores the address and key in files.
   if [ -z "$1" ]; then
     echo "Please provide an account name."
     exit 1
@@ -38,7 +40,7 @@ seed_account() {
   read_account "signer"
   read_account "${1}"
   echo "Minting tokens for client (${1})."
-  ./scripts/mint-tokens.js ./${NETWORK_BASE}/codex-contracts-eth/deployments/codexdisttestnetwork/TestToken.json ${SIGNER_ACCOUNT} ${account_read} 100000000000
+  ./scripts/mint-tokens.js "${CONTRACT_DEPLOY_FULL}/TestToken.json" ${SIGNER_ACCOUNT} ${account_read} 100000000000
 }
 
 read_account () {

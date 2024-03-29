@@ -28,14 +28,15 @@ start_codex_storage_node () {
 
   echo "* Starting Codex storage node ${1} (API port is ${api_port})"
 
-  spawn ${CODEX_SOURCE_HOME}/build/codex ${bootstrap}\
+  spawn "${PROJECT_ROOT}/scripts/tee.sh" "${NETWORK_BASE_FULL}/codex${1}.log"\
+    ${CODEX_SOURCE_HOME}/build/codex ${bootstrap}\
     --data-dir="./codex${1}"\
     --listen-addrs=/ip4/0.0.0.0/tcp/${listen_port}\
     --api-port=${api_port}\
     --disc-port=${disc_port}\
     persistence\
     --eth-provider=http://localhost:8545\
-    --eth-private-key="${PROJECT_ROOT}/${NETWORK_BASE}/storage${1}-key"\
+    --eth-private-key="${NETWORK_BASE_FULL}/storage${1}-key"\
     --marketplace-address="${MARKETPLACE_ADDRESS}"\
     --validator\
     --validator-max-slots=1000\
